@@ -3,8 +3,8 @@
 # ==========================
 $ErrorActionPreference = "Stop"
 
-$LogDir = "C:\ProgramData\MyCompany\Logs"
-$LogFile = "$LogDir\intune-install.log"
+$LogDir = "C:\ProgramData\IntuneApps\Logs"
+$LogFile = "$LogDir\intune-required.log"
 
 New-Item -ItemType Directory -Path $LogDir -Force | Out-Null
 
@@ -72,41 +72,6 @@ function Install-Exe {
 }
 
 try {
-    if (-not (Test-CommandExists "dotnet")) {
-        Log "Installing .NET SDK..."
-
-        $dotnetInstaller = "$TempDir\dotnet-install.ps1"
-
-        Download-File `
-            -Url "https://dot.net/v1/dotnet-install.ps1" `
-            -OutFile $dotnetInstaller
-
-        Log "Running dotnet installer..."
-
-        & "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" `
-            -ExecutionPolicy Bypass `
-            -File $dotnetInstaller `
-            -InstallDir "C:\Program Files\dotnet" `
-            -Channel "LTS"
-
-        Log "Updating PATH..."
-
-        $envPath = [Environment]::GetEnvironmentVariable("Path", [EnvironmentVariableTarget]::Machine)
-
-        if ($envPath -notlike "*C:\Program Files\dotnet*") {
-            [Environment]::SetEnvironmentVariable(
-                "Path",
-                "$envPath;C:\Program Files\dotnet",
-                [EnvironmentVariableTarget]::Machine
-            )
-            Log "PATH updated"
-        } else {
-            Log "PATH already contains dotnet"
-        }
-    } else {
-        Log ".NET already installed — skipping"
-    }
-    
     if (-not (Test-CommandExists "git")) {
         Log "Installing Git..."
 
@@ -126,11 +91,12 @@ try {
         Install-Exe `
             -File $gitInstaller `
             -Arguments "/VERYSILENT /NORESTART /NOCANCEL /SP- /CLOSEAPPLICATIONS /RESTARTAPPLICATIONS"
+
+        Log "Git INSTALLED SUCCESSFULLY"
     } else {
         Log "Git already installed — skipping"
     }
 
-    Log "ALL COMPONENTS INSTALLED SUCCESSFULLY"
     exit 0
 
 } catch {
@@ -142,6 +108,3 @@ try {
     Log "===== INSTALL FINISHED ====="
     Stop-Transcript
 }
-
-
-$dotnetInstalled = [bool](Get-Command dotnet -ErrorAction SilentlyContinue)
