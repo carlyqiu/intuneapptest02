@@ -3,12 +3,11 @@
 # ==========================
 $ErrorActionPreference = "Stop"
 
-$LogDir = "C:\ProgramData\IntuneApps\Logs"
+$LogDir = Join-Path $env:LOCALAPPDATA "IntuneApps\Logs"
 $LogFile = "$LogDir\intune-required.log"
-
-New-Item -ItemType Directory -Path $LogDir -Force | Out-Null
-
-Start-Transcript -Path $LogFile -Append
+$GitDir = Join-Path $env:LOCALAPPDATA "Programs\Git"
+$GitExe = Join-Path $GitDir "cmd\git.exe"
+$TranscriptStarted = $false
 
 function Log {
     param([string]$msg)
@@ -17,19 +16,21 @@ function Log {
 }
 
 $TempDir = $env:TEMP
-Log "TempDir: $TempDir"
-Log "TempDir: $TempDir"
-
-if (!(Test-Path $TempDir)) {
-    Log "TempDir does not exist. Creating..."
-    New-Item -ItemType Directory -Path $TempDir | Out-Null
-}
 
 function Test-CommandExists {
     param([string]$cmd)
     $exists = [bool](Get-Command $cmd -ErrorAction SilentlyContinue)
     Log "Check command [$cmd]: $exists"
     return $exists
+}
+
+function Test-GitInstalled {
+    if (Test-Path -LiteralPath $GitExe -PathType Leaf) {
+        Log "Git found: $GitExe"
+        return $true
+    }
+
+    return (Test-CommandExists "git")
 }
 
 function Download-File {
@@ -72,7 +73,22 @@ function Install-Exe {
 }
 
 try {
-    if (-not (Test-CommandExists "git")) {
+    New-Item -ItemType Directory -Path $LogDir -Force | Out-Null
+    Start-Transcript -Path $LogFile -Append
+    $TranscriptStarted = $true
+
+    Log "TempDir: $TempDir"
+    if (!(Test-Path $TempDir)) {
+        Log "TempDir does not exist. Creating..."
+        New-Item -ItemType Directory -Path $TempDir | Out-Null
+    }
+
+    $env:Path = @(
+        [Environment]::GetEnvironmentVariable('Path', 'Machine')
+        [Environment]::GetEnvironmentVariable('Path', 'User')
+    ) -join ';'
+
+    if (-not (Test-GitInstalled)) {
         Log "Installing Git..."
 
         $rel = Invoke-RestMethod -Uri "https://api.github.com/repos/git-for-windows/git/releases/latest"
@@ -90,7 +106,11 @@ try {
 
         Install-Exe `
             -File $gitInstaller `
-            -Arguments "/VERYSILENT /NORESTART /NOCANCEL /SP- /CLOSEAPPLICATIONS /RESTARTAPPLICATIONS"
+            -Arguments "/VERYSILENT /NORESTART /NOCANCEL /SP- /CLOSEAPPLICATIONS /RESTARTAPPLICATIONS /DIR=`"$GitDir`""
+
+        if (-not (Test-Path -LiteralPath $GitExe -PathType Leaf)) {
+            throw "Git executable not found after installation: $GitExe"
+        }
 
         Log "Git INSTALLED SUCCESSFULLY"
     } else {
@@ -106,5 +126,7 @@ try {
 
 } finally {
     Log "===== INSTALL FINISHED ====="
-    Stop-Transcript
+    if ($TranscriptStarted) {
+        Stop-Transcript
+    }
 }

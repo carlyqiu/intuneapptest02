@@ -1,6 +1,6 @@
 {
   "displayName": "RequiredApp-selin",
-  "installExperience": "system",
+  "installExperience": "user",
   "assignmentIntent": "required",
   "publisher": "ITTest2026101501"
 }
