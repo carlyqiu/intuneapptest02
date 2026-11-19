@@ -13,6 +13,7 @@ function Log {
     param([string]$msg)
     $time = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
     Write-Host "$time - $msg"
+    Write-Host "$time - $msg"
 }
 
 $TempDir = $env:TEMP
