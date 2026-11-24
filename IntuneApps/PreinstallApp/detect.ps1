@@ -10,4 +10,5 @@ if (-not $dotnet) {
 }
 
 Write-Output 'Detected: dotnet'
+Write-Output 'updated'
 exit 0
